@@ -245,6 +245,21 @@ run_with_timeout() {
     return 124
 }
 
+# Waits until a log contains a pattern. $1 = log, $2 = ERE, $3 = seconds.
+wait_for_log_pattern() {
+    local logfile="$1" pattern="$2" seconds="$3" i
+    for ((i = 0; i < seconds; i++)); do
+        if grep -qiE "$pattern" "$logfile"; then
+            return 0
+        fi
+        if [ -n "$SERVER_PID" ] && ! kill -0 "$SERVER_PID" 2>/dev/null; then
+            return 1
+        fi
+        sleep 1
+    done
+    return 1
+}
+
 # Connects two bots and sends real chat through the plugin. $1 = server log.
 run_chat_test() {
     local logfile="$1"
@@ -339,14 +354,16 @@ EOF
     COEXIST_LOG="$WORK/discordsrv.log"
     start_server "$COEXIST_LOG"
 
-    # Both plugins' onEnable runs synchronously during startup, so once the
-    # server is up each has either finished or logged a failure. DiscordSRV
-    # then shuts itself down asynchronously because the fake token cannot
-    # connect to Discord — that is expected and follows a full, clean init.
-    assert_plugin_enabled "Chatty" "$COEXIST_LOG"
+    # DiscordSRV validates the token asynchronously after Paper reports that
+    # startup is complete. Wait for either the expected validation result or
+    # an incompatibility error instead of racing the background login task.
     assert_plugin_enabled "DiscordSRV" "$COEXIST_LOG" true
-    grep -qi "bot token is invalid" "$COEXIST_LOG" \
-        || fail "DiscordSRV did not reach the expected token validation step"
+    if ! wait_for_log_pattern "$COEXIST_LOG" \
+            "bot token is invalid|NoClassDefFoundError|NoSuchMethodError|LinkageError|IncompatibleClassChangeError" 30; then
+        tail -40 "$COEXIST_LOG" >&2
+        fail "DiscordSRV did not reach the expected token validation step"
+    fi
+    assert_plugin_enabled "Chatty" "$COEXIST_LOG"
     if grep -qE "NoClassDefFoundError|NoSuchMethodError|LinkageError|IncompatibleClassChangeError" "$COEXIST_LOG"; then
         grep -nE "NoClassDefFoundError|NoSuchMethodError|LinkageError|IncompatibleClassChangeError" "$COEXIST_LOG" | tail -20 >&2
         fail "classloader/dependency clash with Chatty and DiscordSRV installed together"
