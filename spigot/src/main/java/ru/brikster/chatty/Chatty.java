@@ -85,6 +85,10 @@ public final class Chatty extends JavaPlugin {
     @SneakyThrows
     @Override
     public void onEnable() {
+        // Guice 6 bundles ASM 9.5, which cannot read Java 25 class files when
+        // collecting source line numbers for diagnostic stack traces.
+        System.setProperty("guice_include_stack_traces", "OFF");
+
         Path dataFolderPath = Chatty.this.getDataFolder().toPath();
 
         Map<String, Object> legacyConfig = null;

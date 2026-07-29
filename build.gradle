@@ -56,7 +56,7 @@ subprojects {
 
         compileOnly 'io.papermc.paper:paper-api:26.2.build.60-beta'
 
-        implementation 'com.google.inject:guice:5.1.0'
+        implementation 'com.google.inject:guice:6.0.0'
         implementation 'com.google.guava:guava:30.1-jre'
 
         compileOnly 'org.projectlombok:lombok:1.18.46'
