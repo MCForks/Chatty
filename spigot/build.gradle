@@ -71,6 +71,11 @@ tasks {
         dependsOn(shadowJar)
     }
 
+    test {
+        dependsOn embedSqliteDriver
+        classpath += files(layout.buildDirectory.dir('embedded-sqlite'))
+    }
+
     runServer {
         minecraftVersion('26.2')
     }

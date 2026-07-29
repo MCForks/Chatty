@@ -295,6 +295,15 @@ if [ "$CHAT_TEST" -eq 1 ]; then
 else
     echo "• in-game chat test skipped (node/npm not available)"
 fi
+
+echo "chatty reload" > "$STDIN_PIPE"
+if ! wait_for_log_pattern "$FRESH_LOG" "Plugin successfully reloaded!" 30; then
+    tail -40 "$FRESH_LOG" >&2
+    fail "/chatty reload did not complete successfully"
+fi
+! grep -q "Cannot initialize the bundled SQLite driver" "$FRESH_LOG" \
+    || fail "/chatty reload could not reopen the bundled SQLite driver"
+echo "✓ plugin reloads cleanly with the bundled SQLite driver"
 stop_server
 
 # --- scenario B: legacy v2 migration ---------------------------------------
