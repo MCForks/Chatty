@@ -210,15 +210,16 @@ stop_server() {
     STDIN_PIPE=""
 }
 
-# Verifies a plugin enabled without a fatal error. $1 = plugin name, $2 = log.
+# Verifies a plugin enabled without a fatal error.
+# $1 = plugin name, $2 = log, $3 = allow a later disable (default: false).
 assert_plugin_enabled() {
-    local name="$1" logfile="$2"
+    local name="$1" logfile="$2" allow_disable="${3:-false}"
     grep -q "Enabling $name" "$logfile" || { tail -40 "$logfile" >&2; fail "$name was not enabled"; }
     if grep -qE "Error occurred while enabling $name|Could not load .plugins.$name" "$logfile"; then
         grep -nE "$name|Exception|SEVERE" "$logfile" | tail -40 >&2
         fail "$name failed to enable"
     fi
-    if grep -q "Disabling $name" "$logfile"; then
+    if [ "$allow_disable" != "true" ] && grep -q "Disabling $name" "$logfile"; then
         grep -nE "$name|Exception|ERROR|SEVERE" "$logfile" | tail -40 >&2
         fail "$name was disabled during startup"
     fi
@@ -342,7 +343,9 @@ EOF
     # then shuts itself down asynchronously because the fake token cannot
     # connect to Discord — that is expected and follows a full, clean init.
     assert_plugin_enabled "Chatty" "$COEXIST_LOG"
-    assert_plugin_enabled "DiscordSRV" "$COEXIST_LOG"
+    assert_plugin_enabled "DiscordSRV" "$COEXIST_LOG" true
+    grep -qi "bot token is invalid" "$COEXIST_LOG" \
+        || fail "DiscordSRV did not reach the expected token validation step"
     if grep -qE "NoClassDefFoundError|NoSuchMethodError|LinkageError|IncompatibleClassChangeError" "$COEXIST_LOG"; then
         grep -nE "NoClassDefFoundError|NoSuchMethodError|LinkageError|IncompatibleClassChangeError" "$COEXIST_LOG" | tail -20 >&2
         fail "classloader/dependency clash with Chatty and DiscordSRV installed together"
