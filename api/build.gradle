@@ -1,6 +1,6 @@
 plugins {
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '9.6.1'
 }
 
 tasks {
@@ -9,7 +9,6 @@ tasks {
     }
     shadowJar {
         archiveClassifier = null
-        relocate 'net.kyori', 'ru.brikster.chatty.shaded.net.kyori'
         dependencies {
             exclude(dependency("com.google.guava:guava"))
             exclude(dependency("com.google.inject:guice"))

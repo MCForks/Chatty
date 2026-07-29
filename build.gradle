@@ -1,5 +1,5 @@
 plugins {
-    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.0.1'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.4.1'
 }
 
 allprojects {
@@ -13,11 +13,11 @@ subprojects {
 
     java {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(21))
+            languageVersion.set(JavaLanguageVersion.of(25))
         }
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
-
-    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_11
 
     tasks {
         compileJava {
@@ -35,6 +35,7 @@ subprojects {
 
     repositories {
         mavenCentral()
+        maven { url = 'https://repo.papermc.io/repository/maven-public/' }
         maven { url = 'https://hub.spigotmc.org/nexus/content/groups/public/' }
         maven {
             name = "sonatype-oss-snapshots1"
@@ -42,7 +43,7 @@ subprojects {
         }
     }
 
-    def adventureVersion = "4.26.1"
+    def adventureVersion = "5.2.0"
     def adventureBukkitPlatformVersion = "4.4.1"
 
     dependencies {
@@ -53,13 +54,13 @@ subprojects {
         implementation "net.kyori:adventure-text-serializer-gson:$adventureVersion"
         implementation "net.kyori:adventure-platform-bukkit:$adventureBukkitPlatformVersion"
 
-        compileOnly 'org.spigotmc:spigot-api:1.19-R0.1-SNAPSHOT'
+        compileOnly 'io.papermc.paper:paper-api:26.2.build.+'
 
         implementation 'com.google.inject:guice:5.1.0'
         implementation 'com.google.guava:guava:30.1-jre'
 
-        compileOnly 'org.projectlombok:lombok:1.18.30'
-        annotationProcessor 'org.projectlombok:lombok:1.18.30'
+        compileOnly 'org.projectlombok:lombok:1.18.46'
+        annotationProcessor 'org.projectlombok:lombok:1.18.46'
 
         testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
