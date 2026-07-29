@@ -48,11 +48,11 @@ subprojects {
     dependencies {
         compileOnlyApi 'org.jetbrains:annotations:17.0.0'
 
-        implementation "net.kyori:adventure-api:$adventureVersion"
-        implementation "net.kyori:adventure-text-minimessage:$adventureVersion"
-        implementation "net.kyori:adventure-text-serializer-gson:$adventureVersion"
-        implementation "net.kyori:adventure-text-serializer-legacy:$adventureVersion"
-        implementation "net.kyori:adventure-text-serializer-plain:$adventureVersion"
+        compileOnlyApi "net.kyori:adventure-api:$adventureVersion"
+        compileOnlyApi "net.kyori:adventure-text-minimessage:$adventureVersion"
+        compileOnlyApi "net.kyori:adventure-text-serializer-gson:$adventureVersion"
+        compileOnlyApi "net.kyori:adventure-text-serializer-legacy:$adventureVersion"
+        compileOnlyApi "net.kyori:adventure-text-serializer-plain:$adventureVersion"
 
         compileOnly 'io.papermc.paper:paper-api:26.2.build.60-beta'
 

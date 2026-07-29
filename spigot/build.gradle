@@ -9,14 +9,35 @@ configurations {
     sqliteDriver
 }
 
-// Stages the bundled SQLite driver so shadowJar can embed it verbatim. It
-// cannot be shaded/relocated like the other dependencies: its native library
-// has the original org/sqlite class paths compiled into the binary, which a
-// relocation cannot rewrite. The ".jardata" extension keeps shadowJar from
-// unzipping it — shadow explodes anything ending in ".jar".
-def embedSqliteDriver = tasks.register('embedSqliteDriver', Copy) {
-    from(configurations.sqliteDriver) { rename { 'sqlite-jdbc.jardata' } }
-    into layout.buildDirectory.dir('embedded-sqlite/lib')
+// Repackages the bundled SQLite driver with native libraries for the
+// 64-bit desktop/server platforms supported by Paper. The upstream artifact
+// also contains Android, FreeBSD and 32-bit binaries that cannot be used by
+// this Java 25 plugin and account for most of its size.
+def supportedSqliteNatives = [
+        'Linux/x86_64',
+        'Linux/aarch64',
+        'Linux-Musl/x86_64',
+        'Linux-Musl/aarch64',
+        'Mac/x86_64',
+        'Mac/aarch64',
+        'Windows/x86_64',
+        'Windows/aarch64'
+]
+def embedSqliteDriver = tasks.register('embedSqliteDriver', Zip) {
+    def driverContents = {
+        configurations.sqliteDriver.collect { zipTree(it) }
+    }
+    from(driverContents) {
+        exclude 'org/sqlite/native/**'
+    }
+    from(driverContents) {
+        include supportedSqliteNatives.collect { "org/sqlite/native/${it}/**" }
+    }
+    archiveFileName = 'sqlite-jdbc.jardata'
+    destinationDirectory = layout.buildDirectory.dir('embedded-sqlite/lib')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
 }
 
 tasks {
@@ -97,6 +118,12 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.1'
     implementation('org.redisson:redisson:3.25.1') {
         exclude group: 'org.yaml'
+        // Optional APIs unused by Chatty. Keeping them adds about 7 MB to the
+        // shaded plugin (Reactive, RxJava, LiveObject and JCache support).
+        exclude group: 'io.projectreactor'
+        exclude group: 'io.reactivex.rxjava3'
+        exclude group: 'net.bytebuddy'
+        exclude group: 'javax.cache'
     }
 
     compileOnly 'net.milkbowl.vault:VaultAPI:1.7'
