@@ -9,50 +9,80 @@ on:
       version:
         description: 'Version to build (without the leading v)'
         required: true
+        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@main
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Resolve version
         id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "value=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+            version="${INPUT_VERSION#v}"
           else
-            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            version="${GITHUB_REF_NAME#v}"
           fi
+          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){2}([.-][0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::Invalid release version: $version"
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '25'
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 8.8
+        uses: gradle/actions/setup-gradle@v6
 
-      - name: Build
-        run: gradle build -PchattyVersion=${{ steps.version.outputs.value }}
+      - name: Build release
+        run: ./gradlew clean build --no-daemon -PchattyVersion=${{ steps.version.outputs.value }}
 
-      - uses: actions/upload-artifact@main
+      - name: Verify release artifact
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          artifact="build/libs/Chatty-${VERSION}.jar"
+          test -f "$artifact"
+          sha256sum "$artifact" > "${artifact}.sha256"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
         with:
           name: Chatty-${{ steps.version.outputs.value }}
-          path: build/libs/*.jar
+          path: |
+            build/libs/Chatty-${{ steps.version.outputs.value }}.jar
+            build/libs/Chatty-${{ steps.version.outputs.value }}.jar.sha256
+          if-no-files-found: error
 
-      - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           name: Chatty ${{ steps.version.outputs.value }}
-          files: build/libs/*.jar
-          draft: true
+          target_commitish: ${{ github.sha }}
+          files: |
+            build/libs/Chatty-${{ steps.version.outputs.value }}.jar
+            build/libs/Chatty-${{ steps.version.outputs.value }}.jar.sha256
+          fail_on_unmatched_files: true
+          draft: false
           generate_release_notes: true
