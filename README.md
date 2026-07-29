@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-# Chatty (Bukkit plugin)
+# Chatty (Paper plugin)
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Brikster/Chatty)](https://github.com/Brikster/Chatty/releases/latest)
 [![GitHub All Releases](https://img.shields.io/github/downloads/Brikster/Chatty/total)](https://github.com/Brikster/Chatty/releases)
@@ -22,7 +22,7 @@
 > Chatty v2.* is deprecated and no longer maintained.
 > Upgrading from v2? See [MIGRATION.md](MIGRATION.md) — v3 migrates your old config automatically.
 
-Chatty is the modern chat management system for Bukkit-compatible servers. It's based on-top of Kyori's Adventure library, 
+Chatty is the modern chat management system for Paper 26.2 and compatible Paper-based server implementations. It's based on-top of Kyori's Adventure library,
 that makes it so powerful and stable.
 
 **Key features**:
@@ -35,7 +35,7 @@ that makes it so powerful and stable.
 
 ## Building
 
-Chatty uses Gradle to handle dependencies & building. You need JDK 11 or higher to compile Chatty.
+Chatty uses Gradle to handle dependencies & building. You need JDK 25 or higher to compile Chatty.
 
 ### Compiling from source
 
@@ -56,16 +56,13 @@ Run the unit tests:
 ```
 
 Run the end-to-end smoke test — it boots real Minecraft servers with the built
-plugin and verifies that it enables cleanly on a fresh install, processes live
-in-game chat, correctly migrates a legacy v2 configuration, still runs on a
-legacy server (1.8.8), and coexists with DiscordSRV:
+plugin and verifies that it enables cleanly on Paper 26.2, processes live
+in-game chat, correctly migrates a legacy v2 configuration, and coexists with
+DiscordSRV:
 
 ```shell script
 ./gradlew build
-JAVA_HOME=/path/to/jdk-21 bash scripts/smoke-test.sh
+JAVA_HOME=/path/to/jdk-25 bash scripts/smoke-test.sh
 ```
-
-The legacy-server scenario needs a Java 11 runtime; it is downloaded
-automatically, or point `LEGACY_JAVA_HOME` at an existing one.
 
 Both run automatically on every push via GitHub Actions.
