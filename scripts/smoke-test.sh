@@ -38,9 +38,16 @@ if [ -n "${JAVA_HOME:-}" ]; then
 fi
 
 cleanup() {
-    [ -n "$SERVER_PID" ] && kill -9 "$SERVER_PID" 2>/dev/null || true
-    [ -n "$HOLDER_PID" ] && kill "$HOLDER_PID" 2>/dev/null || true
-    [ -n "$PIPE_DIR" ] && rm -rf "$PIPE_DIR"
+    if [ -n "$SERVER_PID" ]; then
+        kill -9 "$SERVER_PID" 2>/dev/null || true
+    fi
+    if [ -n "$HOLDER_PID" ]; then
+        kill "$HOLDER_PID" 2>/dev/null || true
+    fi
+    if [ -n "$PIPE_DIR" ]; then
+        rm -rf "$PIPE_DIR"
+    fi
+    return 0
 }
 trap cleanup EXIT
 
