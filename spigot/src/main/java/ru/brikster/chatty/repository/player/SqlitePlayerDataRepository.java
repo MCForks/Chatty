@@ -25,6 +25,7 @@ import java.util.UUID;
 public final class SqlitePlayerDataRepository implements PlayerDataRepository {
 
     private final HikariDataSource dataSource;
+    private final IsolatedSqliteDriver.LoadedDataSource loadedDriver;
 
     public SqlitePlayerDataRepository(Path dataFolder) {
         try {
@@ -35,21 +36,39 @@ public final class SqlitePlayerDataRepository implements PlayerDataRepository {
 
         String jdbcUrl = "jdbc:sqlite:" + dataFolder.resolve("database.sqlite");
 
+        IsolatedSqliteDriver.LoadedDataSource initializedDriver =
+                IsolatedSqliteDriver.createDataSource(dataFolder, jdbcUrl);
+
         HikariConfig config = new HikariConfig();
         // Use the bundled driver loaded by an isolated classloader instead of a
         // bare jdbcUrl — otherwise HikariCP picks up whatever org.sqlite the
         // server ships, which on legacy servers is an ancient, broken build.
-        config.setDataSource(IsolatedSqliteDriver.createDataSource(dataFolder, jdbcUrl));
+        config.setDataSource(initializedDriver.dataSource());
         config.setPoolName("Chatty");
         config.setMaximumPoolSize(8);
 
-        this.dataSource = new HikariDataSource(config);
+        HikariDataSource initializedDataSource = null;
+        try {
+            initializedDataSource = new HikariDataSource(config);
+            Flyway flyway = Flyway.configure(Chatty.class.getClassLoader())
+                    .locations("db/migration/sqlite")
+                    .dataSource(initializedDataSource)
+                    .load();
+            flyway.migrate();
+        } catch (RuntimeException exception) {
+            if (initializedDataSource != null) {
+                initializedDataSource.close();
+            }
+            try {
+                initializedDriver.close();
+            } catch (IOException closeException) {
+                exception.addSuppressed(closeException);
+            }
+            throw exception;
+        }
 
-        Flyway flyway = Flyway.configure(Chatty.class.getClassLoader())
-                .locations("db/migration/sqlite")
-                .dataSource(dataSource)
-                .load();
-        flyway.migrate();
+        this.dataSource = initializedDataSource;
+        this.loadedDriver = initializedDriver;
     }
 
     @Override
@@ -250,8 +269,12 @@ public final class SqlitePlayerDataRepository implements PlayerDataRepository {
     }
 
     @Override
-    public void close() {
-        dataSource.close();
+    public void close() throws IOException {
+        try {
+            dataSource.close();
+        } finally {
+            loadedDriver.close();
+        }
     }
 
 }

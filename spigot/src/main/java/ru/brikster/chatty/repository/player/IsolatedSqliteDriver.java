@@ -3,12 +3,17 @@ package ru.brikster.chatty.repository.player;
 import org.jetbrains.annotations.NotNull;
 
 import javax.sql.DataSource;
+import java.io.Closeable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 
 /**
  * Loads the bundled SQLite JDBC driver through a dedicated classloader that is
@@ -46,31 +51,70 @@ final class IsolatedSqliteDriver {
      *                   {@code <dataFolder>/lib})
      * @param jdbcUrl    the {@code jdbc:sqlite:...} URL of the database
      */
-    static @NotNull DataSource createDataSource(@NotNull Path dataFolder, @NotNull String jdbcUrl) {
+    static @NotNull LoadedDataSource createDataSource(@NotNull Path dataFolder, @NotNull String jdbcUrl) {
+        URLClassLoader driverLoader = null;
         try {
-            Path driverJar = dataFolder.resolve("lib").resolve("sqlite-jdbc.jar");
-            Files.createDirectories(driverJar.getParent());
-
+            byte[] bundledBytes;
             try (InputStream bundled = IsolatedSqliteDriver.class.getResourceAsStream(BUNDLED_JAR)) {
                 if (bundled == null) {
                     throw new IllegalStateException("Bundled SQLite driver " + BUNDLED_JAR + " is missing from the plugin jar");
                 }
-                Files.copy(bundled, driverJar, StandardCopyOption.REPLACE_EXISTING);
+                bundledBytes = bundled.readAllBytes();
+            }
+
+            String fingerprint = HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(bundledBytes), 0, 8);
+            Path driverJar = dataFolder.resolve("lib").resolve("sqlite-jdbc-" + fingerprint + ".jar");
+            Files.createDirectories(driverJar.getParent());
+
+            if (Files.notExists(driverJar)) {
+                try {
+                    Files.write(driverJar, bundledBytes, StandardOpenOption.CREATE_NEW);
+                } catch (FileAlreadyExistsException ignored) {
+                    // Another concurrent initialization wrote the same content.
+                }
             }
 
             // Parent = platform classloader: the JDK and the java.sql interfaces,
-            // but not the server classpath. The loader is intentionally not closed
-            // — it must outlive the data source and pooled connections.
-            URLClassLoader driverLoader = new URLClassLoader(
+            // but not the server classpath. The repository closes this loader
+            // after Hikari has closed all pooled connections.
+            driverLoader = new URLClassLoader(
                     new URL[]{driverJar.toUri().toURL()},
                     ClassLoader.getPlatformClassLoader());
 
             Class<?> dataSourceClass = driverLoader.loadClass("org.sqlite.SQLiteDataSource");
             DataSource dataSource = (DataSource) dataSourceClass.getDeclaredConstructor().newInstance();
             dataSourceClass.getMethod("setUrl", String.class).invoke(dataSource, jdbcUrl);
-            return dataSource;
+            return new LoadedDataSource(dataSource, driverLoader);
         } catch (Exception e) {
+            if (driverLoader != null) {
+                try {
+                    driverLoader.close();
+                } catch (IOException closeException) {
+                    e.addSuppressed(closeException);
+                }
+            }
             throw new IllegalStateException("Cannot initialize the bundled SQLite driver", e);
+        }
+    }
+
+    static final class LoadedDataSource implements Closeable {
+
+        private final DataSource dataSource;
+        private final URLClassLoader driverLoader;
+
+        private LoadedDataSource(DataSource dataSource, URLClassLoader driverLoader) {
+            this.dataSource = dataSource;
+            this.driverLoader = driverLoader;
+        }
+
+        DataSource dataSource() {
+            return dataSource;
+        }
+
+        @Override
+        public void close() throws IOException {
+            driverLoader.close();
         }
     }
 
