@@ -6,42 +6,41 @@
 #   A. fresh install       -> the plugin enables, generates configs, and
 #                             processes real in-game chat (two bots) cleanly
 #   B. legacy v2 migration -> a v2 config.yml is migrated into v3 files
-#   C. legacy server       -> the plugin enables and processes chat on an old
-#                             server (1.8.8), exercising the bundled Adventure
-#                             path and the isolated SQLite driver
-#   D. DiscordSRV coexist  -> Chatty and DiscordSRV initialise cleanly side by
+#   C. DiscordSRV coexist  -> Chatty and DiscordSRV initialise cleanly side by
 #                             side, with no classloader or dependency clash
 #
-# Requirements: bash, curl, python3, and a JDK 21 (point JAVA_HOME at it).
-# The in-game chat test additionally needs node + npm; without them it (and
-# scenario C) is skipped. Scenario C also needs a Java 11 runtime for the old
-# server — it is downloaded automatically when not supplied via LEGACY_JAVA_HOME.
+# Requirements: bash, curl, python3, and a JDK 25 (point JAVA_HOME at it).
+# The in-game chat test additionally needs node + npm; without them it is
+# skipped.
 #
 # Build the plugin first (./gradlew build); the workflow does this for CI.
 #
-# Usage:  JAVA_HOME=/path/to/jdk-21 bash scripts/smoke-test.sh
+# Usage:  JAVA_HOME=/path/to/jdk-25 bash scripts/smoke-test.sh
 #
 set -euo pipefail
 
-MC_VERSION="${MC_VERSION:-1.21.4}"
-LEGACY_MC_VERSION="${LEGACY_MC_VERSION:-1.8.8}"
+MC_VERSION="${MC_VERSION:-26.2}"
+SERVER_PORT="${SERVER_PORT:-25575}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Kept under build/ (git-ignored) so logs survive for inspection / CI artifacts.
 WORK="$ROOT/build/smoke-test"
 BOT_TOOLS="$ROOT/build/bot-tools"   # cached node_modules for the chat test
-JDK_TOOLS="$ROOT/build/jdk-tools"   # cached Java 11 runtime for the legacy server
 SERVER="$WORK/server"
-LEGACY_SERVER="$WORK/legacy-server"
-LEGACY_JAVA_BIN=""
 SERVER_PID=""
 HOLDER_PID=""
+PIPE_DIR=""
+STDIN_PIPE=""
 
 JAVA_BIN="java"
-[ -n "${JAVA_HOME:-}" ] && JAVA_BIN="$JAVA_HOME/bin/java"
+if [ -n "${JAVA_HOME:-}" ]; then
+    JAVA_BIN="$JAVA_HOME/bin/java"
+    [ -x "$JAVA_BIN.exe" ] && JAVA_BIN="$JAVA_BIN.exe"
+fi
 
 cleanup() {
     [ -n "$SERVER_PID" ] && kill -9 "$SERVER_PID" 2>/dev/null || true
     [ -n "$HOLDER_PID" ] && kill "$HOLDER_PID" 2>/dev/null || true
+    [ -n "$PIPE_DIR" ] && rm -rf "$PIPE_DIR"
 }
 trap cleanup EXIT
 
@@ -51,13 +50,26 @@ mkdir -p "$WORK"
 step() { printf '\n\033[1m=== %s ===\033[0m\n' "$1"; }
 fail() { printf '\n\033[31m✗ SMOKE TEST FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
-# Downloads the latest Paper build for a version.  $1 = version, $2 = output jar.
+# Downloads the newest stable Paper build for a version, or the newest
+# available build when the requested version is still experimental.
+# $1 = version, $2 = output jar.
 download_paper() {
-    local version="$1" out="$2" build
-    build="$(curl -fsSL "https://api.papermc.io/v2/projects/paper/versions/$version" \
-        | python3 -c 'import sys, json; print(json.load(sys.stdin)["builds"][-1])')"
-    curl -fsSL -o "$out" \
-        "https://api.papermc.io/v2/projects/paper/versions/$version/builds/$build/downloads/paper-$version-$build.jar"
+    local version="$1" out="$2" response url build
+    response="$(curl -fsSL \
+        -H "User-Agent: Chatty-smoke-test/3.0 (https://github.com/Brikster/Chatty)" \
+        "https://fill.papermc.io/v3/projects/paper/versions/$version/builds")"
+    readarray -t paper_build < <(printf '%s' "$response" | python3 -c '
+import json, sys
+builds = json.load(sys.stdin)
+build = next((item for item in builds if item["channel"] == "STABLE"), builds[0])
+print(build["id"])
+print(build["downloads"]["server:default"]["url"])
+')
+    build="${paper_build[0]}"
+    url="${paper_build[1]}"
+    curl -fsSL \
+        -H "User-Agent: Chatty-smoke-test/3.0 (https://github.com/Brikster/Chatty)" \
+        -o "$out" "$url"
     echo "Paper $version build $build"
 }
 
@@ -70,29 +82,6 @@ download_discordsrv() {
     [ -n "$url" ] || return 1
     curl -fsSL -o "$out" "$url" || return 1
     echo "DiscordSRV: ${url##*/}"
-}
-
-# Locates a Java 11 runtime for the legacy server — modern JDKs cannot run it.
-# Uses $LEGACY_JAVA_HOME when set, otherwise downloads a Temurin JRE 11 under
-# build/. Sets LEGACY_JAVA_BIN; returns non-zero when none can be obtained.
-ensure_legacy_java() {
-    if [ -n "${LEGACY_JAVA_HOME:-}" ] && [ -x "$LEGACY_JAVA_HOME/bin/java" ]; then
-        LEGACY_JAVA_BIN="$LEGACY_JAVA_HOME/bin/java"
-        return 0
-    fi
-    local os arch
-    case "$(uname -s)" in Darwin) os=mac;; Linux) os=linux;; *) return 1;; esac
-    case "$(uname -m)" in arm64 | aarch64) arch=aarch64;; x86_64 | amd64) arch=x64;; *) return 1;; esac
-    local dir="$JDK_TOOLS/temurin-jre-11-$os-$arch"
-    LEGACY_JAVA_BIN="$(find "$dir" -name java -path '*/bin/*' 2>/dev/null | head -1)"
-    if [ -z "$LEGACY_JAVA_BIN" ]; then
-        step "Downloading Temurin JRE 11 (to run the legacy $LEGACY_MC_VERSION server)"
-        mkdir -p "$dir"
-        curl -fsSL "https://api.adoptium.net/v3/binary/latest/11/ga/$os/$arch/jre/hotspot/normal/eclipse" \
-            | tar -xz -C "$dir" --strip-components=1 || return 1
-        LEGACY_JAVA_BIN="$(find "$dir" -name java -path '*/bin/*' 2>/dev/null | head -1)"
-    fi
-    [ -n "$LEGACY_JAVA_BIN" ] && [ -x "$LEGACY_JAVA_BIN" ]
 }
 
 # --- locate the plugin jar -------------------------------------------------
@@ -136,11 +125,12 @@ download_paper "$MC_VERSION" "$PAPER_JAR"
 
 mkdir -p "$SERVER/plugins"
 echo "eula=true" > "$SERVER/eula.txt"
-cat > "$SERVER/server.properties" <<'EOF'
+cat > "$SERVER/server.properties" <<EOF
 online-mode=false
 level-type=flat
 spawn-protection=0
 max-players=10
+server-port=$SERVER_PORT
 EOF
 cp "$JAR" "$SERVER/plugins/Chatty.jar"
 
@@ -162,19 +152,28 @@ EOF
         mkdir -p "$BOT_TOOLS"
         (cd "$BOT_TOOLS" && npm install --no-fund --no-audit --loglevel=error mineflayer >/dev/null)
     fi
+    if ! NODE_PATH="$BOT_TOOLS/node_modules" node -e \
+            'process.exit(require("minecraft-data")(process.argv[1]) ? 0 : 1)' "$MC_VERSION"; then
+        CHAT_TEST=0
+        echo "Mineflayer does not support Minecraft $MC_VERSION yet — the in-game chat test will be skipped"
+    fi
 fi
 
 # Boots the server and waits for full startup, leaving it running.
 # $1 = path to write the server log to.
 start_server() {
     local logfile="$1"
-    local pipe="$WORK/stdin.pipe"
-    rm -f "$pipe"; mkfifo "$pipe"
-    sleep 1800 > "$pipe" &          # holds the stdin pipe open
+    local paper_java_path="$PAPER_JAR"
+    if [[ "$JAVA_BIN" == *.exe ]] && command -v wslpath >/dev/null 2>&1; then
+        paper_java_path="$(wslpath -w "$PAPER_JAR")"
+    fi
+    PIPE_DIR="$(mktemp -d)"
+    STDIN_PIPE="$PIPE_DIR/stdin.pipe"
+    mkfifo "$STDIN_PIPE"
+    sleep 1800 > "$STDIN_PIPE" &
     HOLDER_PID=$!
-    disown "$HOLDER_PID" 2>/dev/null || true
-    ( cd "$SERVER" && exec "$JAVA_BIN" -Xmx1G -jar "$PAPER_JAR" nogui ) \
-        < "$pipe" > "$logfile" 2>&1 &
+    ( cd "$SERVER" && exec "$JAVA_BIN" -Xmx1G -jar "$paper_java_path" nogui ) \
+        < "$STDIN_PIPE" > "$logfile" 2>&1 &
     SERVER_PID=$!
 
     local ready=0 i
@@ -188,8 +187,7 @@ start_server() {
 
 # Stops the running server cleanly.
 stop_server() {
-    local pipe="$WORK/stdin.pipe"
-    echo "stop" > "$pipe" 2>/dev/null || true
+    echo "stop" > "$STDIN_PIPE" 2>/dev/null || true
     local i
     for ((i = 0; i < 60; i++)); do
         kill -0 "$SERVER_PID" 2>/dev/null || break
@@ -198,7 +196,11 @@ stop_server() {
     kill -9 "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
     kill "$HOLDER_PID" 2>/dev/null || true
-    SERVER_PID=""; HOLDER_PID=""
+    rm -rf "$PIPE_DIR"
+    SERVER_PID=""
+    HOLDER_PID=""
+    PIPE_DIR=""
+    STDIN_PIPE=""
 }
 
 # Verifies a plugin enabled without a fatal error. $1 = plugin name, $2 = log.
@@ -208,6 +210,10 @@ assert_plugin_enabled() {
     if grep -qE "Error occurred while enabling $name|Could not load .plugins.$name" "$logfile"; then
         grep -nE "$name|Exception|SEVERE" "$logfile" | tail -40 >&2
         fail "$name failed to enable"
+    fi
+    if grep -q "Disabling $name" "$logfile"; then
+        grep -nE "$name|Exception|ERROR|SEVERE" "$logfile" | tail -40 >&2
+        fail "$name was disabled during startup"
     fi
 }
 
@@ -235,7 +241,7 @@ run_chat_test() {
     local logfile="$1"
     step "Sending in-game chat through the plugin"
     if ! run_with_timeout 200 env \
-            NODE_PATH="$BOT_TOOLS/node_modules" BOT_HOST=127.0.0.1 BOT_PORT=25565 \
+            NODE_PATH="$BOT_TOOLS/node_modules" BOT_HOST=127.0.0.1 BOT_PORT="$SERVER_PORT" \
             node "$ROOT/scripts/chat-test.js"; then
         tail -40 "$logfile" >&2
         fail "in-game chat test failed"
@@ -303,9 +309,9 @@ stop_server
 echo
 grep -E "\[Chatty\].*(Migrat|migrat|review|-)" "$MIGRATE_LOG" || true
 
-# --- scenario D: DiscordSRV coexistence ------------------------------------
+# --- scenario C: DiscordSRV coexistence ------------------------------------
 
-step "Scenario D — DiscordSRV coexistence"
+step "Scenario C — DiscordSRV coexistence"
 if download_discordsrv "$WORK/DiscordSRV.jar"; then
     rm -rf "$SERVER/plugins/Chatty" "$SERVER"/plugins/Chatty_old_* "$SERVER/plugins/DiscordSRV"
     cp "$JAR" "$SERVER/plugins/Chatty.jar"
@@ -344,49 +350,6 @@ EOF
     rm -f "$SERVER/plugins/DiscordSRV.jar"
 else
     echo "• DiscordSRV scenario skipped (could not download DiscordSRV)"
-fi
-
-# --- scenario C: legacy server ---------------------------------------------
-
-step "Scenario C — legacy server ($LEGACY_MC_VERSION)"
-if [ "$CHAT_TEST" -eq 1 ] && ensure_legacy_java; then
-    "$LEGACY_JAVA_BIN" -version 2>&1 | head -1
-    download_paper "$LEGACY_MC_VERSION" "$WORK/paper-legacy.jar"
-
-    rm -rf "$LEGACY_SERVER"
-    mkdir -p "$LEGACY_SERVER/plugins"
-    echo "eula=true" > "$LEGACY_SERVER/eula.txt"
-    # use-native-transport=false forces the NIO transport: the ancient Netty
-    # epoll bundled with 1.8.8 crashes ("Unable to access address of buffer")
-    # on modern Linux kernels, e.g. CI runners.
-    cat > "$LEGACY_SERVER/server.properties" <<'EOF'
-online-mode=false
-level-type=flat
-spawn-protection=0
-max-players=10
-use-native-transport=false
-EOF
-    cp "$JAR" "$LEGACY_SERVER/plugins/Chatty.jar"
-    cat > "$LEGACY_SERVER/ops.json" <<EOF
-[
-  {"uuid":"$(offline_uuid SmokeSender)","name":"SmokeSender","level":4,"bypassesPlayerLimit":false},
-  {"uuid":"$(offline_uuid SmokeTarget)","name":"SmokeTarget","level":4,"bypassesPlayerLimit":false}
-]
-EOF
-
-    # The legacy server runs on its own (older) Java and Paper jar; start_server
-    # and stop_server act on these globals.
-    SERVER="$LEGACY_SERVER"
-    PAPER_JAR="$WORK/paper-legacy.jar"
-    JAVA_BIN="$LEGACY_JAVA_BIN"
-    LEGACY_LOG="$WORK/legacy.log"
-    start_server "$LEGACY_LOG"
-    assert_enabled "$LEGACY_LOG"
-    echo "✓ plugin enables on a legacy $LEGACY_MC_VERSION server (bundled Adventure + isolated SQLite driver)"
-    run_chat_test "$LEGACY_LOG"
-    stop_server
-else
-    echo "• legacy-server scenario skipped (node or a Java 11 runtime unavailable)"
 fi
 
 printf '\n\033[32m✓ SMOKE TEST PASSED\033[0m\n'
