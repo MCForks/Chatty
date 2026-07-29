@@ -1,7 +1,7 @@
 package ru.brikster.chatty.notification;
 
 import lombok.Value;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -23,12 +23,12 @@ public class TitleNotification extends Notification {
     private final String name;
     private final List<TitleNotificationMessage> messages;
 
-    private final BukkitAudiences audiences;
+    private final AudienceProvider audiences;
     private final PlaceholdersComponentTransformer placeholdersComponentTransformer;
 
     public TitleNotification(String name, int period, List<TitleNotificationMessage> messages,
                               boolean permission, boolean random,
-                              BukkitAudiences audiences,
+                              AudienceProvider audiences,
                              PlaceholdersComponentTransformer placeholdersComponentTransformer) {
         super(period, permission, messages.size(), random);
 

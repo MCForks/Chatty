@@ -1,7 +1,7 @@
 package ru.brikster.chatty.notification;
 
 import com.google.common.base.Preconditions;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -19,7 +19,7 @@ public class ActionbarNotification extends Notification {
     private final int period;
     private final int stay;
 
-    private final BukkitAudiences audiences;
+    private final AudienceProvider audiences;
     private final PlaceholdersComponentTransformer placeholdersComponentTransformer;
 
     private int currentMessage;
@@ -29,7 +29,7 @@ public class ActionbarNotification extends Notification {
 
     public ActionbarNotification(String name, int period, int stay, List<Component> messages,
                                   boolean permission, boolean random,
-                                  BukkitAudiences audiences,
+                                  AudienceProvider audiences,
                                  PlaceholdersComponentTransformer placeholdersComponentTransformer) {
         super(1, permission, messages.size(), random);
 

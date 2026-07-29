@@ -2,7 +2,7 @@ package ru.brikster.chatty.chat;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
@@ -31,7 +31,7 @@ public final class ChatImpl implements Chat {
     private final @NotNull String id;
     private final @Nullable String displayName;
 
-    private final @NotNull BukkitAudiences audiences;
+    private final @NotNull AudienceProvider audiences;
 
     @Getter
     private final @NotNull Component format;

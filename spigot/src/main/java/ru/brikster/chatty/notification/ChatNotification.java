@@ -1,6 +1,6 @@
 package ru.brikster.chatty.notification;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -15,12 +15,12 @@ public final class ChatNotification extends Notification {
     private final String name;
     private final List<Component> messages;
 
-    private final BukkitAudiences audiences;
+    private final AudienceProvider audiences;
     private final PlaceholdersComponentTransformer placeholdersComponentTransformer;
 
     public ChatNotification(String name, int delay, List<Component> messages,
                             boolean permission, boolean random,
-                            BukkitAudiences audiences,
+                            AudienceProvider audiences,
                             PlaceholdersComponentTransformer placeholdersComponentTransformer) {
         super(delay, permission, messages.size(), random);
 

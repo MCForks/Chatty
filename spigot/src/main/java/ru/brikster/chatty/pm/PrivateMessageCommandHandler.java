@@ -1,7 +1,7 @@
 package ru.brikster.chatty.pm;
 
 import cloud.commandframework.context.CommandContext;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -24,7 +24,7 @@ public final class PrivateMessageCommandHandler {
     @Inject private PmConfig pmConfig;
     @Inject private PmMessageService pmMessageService;
     @Inject private MessagesConfig messagesConfig;
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
     @Inject private PlayerDataRepository playerDataRepository;
     @Inject private ProxyService proxyService;
 

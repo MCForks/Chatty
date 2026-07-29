@@ -1,112 +1,56 @@
 package ru.brikster.chatty.adventure;
 
 import net.kyori.adventure.audience.Audience;
-import net.kyori.adventure.key.Key;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
-import net.kyori.adventure.text.flattener.ComponentFlattener;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 import java.util.function.Predicate;
 
-public final class NativeBukkitAudienceProvider implements BukkitAudiences {
+/**
+ * Paper-native audience provider. Paper command senders implement Adventure's
+ * {@link Audience} interface directly, so no platform bridge is required.
+ */
+public final class NativeBukkitAudienceProvider implements AudienceProvider {
 
     @Override
     public @NotNull Audience all() {
-        List<Audience> audienceList = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            audienceList.add(new NativeAudienceAdapter(player));
-        }
-        audienceList.add(new NativeAudienceAdapter(Bukkit.getConsoleSender()));
-        return Audience.audience(audienceList);
+        List<Audience> audiences = new ArrayList<>(Bukkit.getOnlinePlayers());
+        audiences.add(Bukkit.getConsoleSender());
+        return Audience.audience(audiences);
     }
 
     @Override
     public @NotNull Audience console() {
-        return new NativeAudienceAdapter(Bukkit.getConsoleSender());
-    }
-
-    @Override
-    public @NotNull Audience players() {
-        List<Audience> audienceList = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            audienceList.add(new NativeAudienceAdapter(player));
-        }
-        return Audience.audience(audienceList);
-    }
-
-    @Override
-    public @NotNull Audience player(@NotNull UUID playerId) {
-        return new NativeAudienceAdapter(Objects.requireNonNull(Bukkit.getPlayer(playerId),
-                "Cannot find player"));
-    }
-
-    @Override
-    public @NotNull Audience permission(@NotNull String permission) {
-        List<Audience> audienceList = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.hasPermission(permission)) {
-                audienceList.add(new NativeAudienceAdapter(player));
-            }
-        }
-        audienceList.add(new NativeAudienceAdapter(Bukkit.getConsoleSender()));
-        return Audience.audience(audienceList);
-    }
-
-    @Override
-    public @NotNull Audience world(@NotNull Key world) {
-        List<Audience> audienceList = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getWorld().getName().equals(world.asString())) {
-                audienceList.add(new NativeAudienceAdapter(player));
-            }
-        }
-        return Audience.audience(audienceList);
-    }
-
-    @Override
-    public @NotNull Audience server(@NotNull String serverName) {
-        return Audience.empty();
-    }
-
-    @Override
-    public @NotNull ComponentFlattener flattener() {
-        return ComponentFlattener.basic();
-    }
-
-    @Override
-    public void close() {
-
-    }
-
-    @Override
-    public @NotNull Audience sender(@NotNull CommandSender sender) {
-        return Audience.audience(new NativeAudienceAdapter(sender));
+        return Bukkit.getConsoleSender();
     }
 
     @Override
     public @NotNull Audience player(@NotNull Player player) {
-        return sender(player);
+        return player;
+    }
+
+    @Override
+    public @NotNull Audience sender(@NotNull CommandSender sender) {
+        return sender;
     }
 
     @Override
     public @NotNull Audience filter(@NotNull Predicate<CommandSender> filter) {
-        List<Audience> audienceList = new ArrayList<>();
+        List<Audience> audiences = new ArrayList<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (filter.test(player)) {
-                audienceList.add(new NativeAudienceAdapter(player));
+                audiences.add(player);
             }
         }
         if (filter.test(Bukkit.getConsoleSender())) {
-            audienceList.add(new NativeAudienceAdapter(Bukkit.getConsoleSender()));
+            audiences.add(Bukkit.getConsoleSender());
         }
-        return Audience.audience(audienceList);
+        return Audience.audience(audiences);
     }
 
 }

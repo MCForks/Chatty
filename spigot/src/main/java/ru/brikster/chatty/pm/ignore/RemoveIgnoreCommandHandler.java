@@ -2,7 +2,7 @@ package ru.brikster.chatty.pm.ignore;
 
 import cloud.commandframework.context.CommandContext;
 import cloud.commandframework.execution.CommandExecutionHandler;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +19,7 @@ import java.util.UUID;
 public final class RemoveIgnoreCommandHandler implements CommandExecutionHandler<CommandSender> {
 
     @Inject private PmMessageService pmMessageService;
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
     @Inject private MessagesConfig messagesConfig;
     @Inject private PlayerDataRepository repository;
 

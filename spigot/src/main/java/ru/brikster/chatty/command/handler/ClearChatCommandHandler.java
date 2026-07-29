@@ -3,7 +3,7 @@ package ru.brikster.chatty.command.handler;
 import cloud.commandframework.context.CommandContext;
 import cloud.commandframework.execution.CommandExecutionHandler;
 import lombok.RequiredArgsConstructor;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -17,7 +17,7 @@ import javax.inject.Singleton;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ClearChatCommandHandler implements CommandExecutionHandler<CommandSender> {
 
-    private final BukkitAudiences audiences;
+    private final AudienceProvider audiences;
     private final MessagesConfig messagesConfig;
 
     @Override

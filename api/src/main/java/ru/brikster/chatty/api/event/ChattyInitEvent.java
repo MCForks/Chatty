@@ -1,6 +1,6 @@
 package ru.brikster.chatty.api.event;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -9,9 +9,9 @@ public class ChattyInitEvent extends Event {
 
     private static final HandlerList HANDLER_LIST = new HandlerList();
 
-    private BukkitAudiences audienceProvider;
+    private AudienceProvider audienceProvider;
 
-    public ChattyInitEvent(BukkitAudiences audienceProvider) {
+    public ChattyInitEvent(AudienceProvider audienceProvider) {
         this.audienceProvider = audienceProvider;
     }
 
@@ -19,15 +19,15 @@ public class ChattyInitEvent extends Event {
      * Get AudienceProvider that Chatty will use
      * @return audience provider
      */
-    public BukkitAudiences getAudienceProvider() {
+    public AudienceProvider getAudienceProvider() {
         return audienceProvider;
     }
 
     /**
-     * Set custom BukkitAudiences. May be useful to write addons for modded servers support
+     * Set custom AudienceProvider. May be useful to write addons for modded servers support
      * @param audienceProvider custom audience provider
      */
-    public void setAudienceProvider(final BukkitAudiences audienceProvider) {
+    public void setAudienceProvider(final AudienceProvider audienceProvider) {
         this.audienceProvider = audienceProvider;
     }
 

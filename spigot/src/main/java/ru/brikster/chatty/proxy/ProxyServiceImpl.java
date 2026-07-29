@@ -1,6 +1,6 @@
 package ru.brikster.chatty.proxy;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
@@ -52,7 +52,7 @@ public final class ProxyServiceImpl implements ProxyService {
 
     @Inject
     public ProxyServiceImpl(Config redissonConfig,
-                            BukkitAudiences audiences,
+                            AudienceProvider audiences,
                             ChatRegistry chatRegistry,
                             PmConfig pmConfig,
                             ChatStylePlayerGrouper stylePlayerGrouper,

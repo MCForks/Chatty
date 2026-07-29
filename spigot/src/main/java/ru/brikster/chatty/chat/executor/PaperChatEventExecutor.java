@@ -1,7 +1,7 @@
 package ru.brikster.chatty.chat.executor;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -49,7 +49,7 @@ public final class PaperChatEventExecutor implements Listener, EventExecutor {
 
     @Inject private ChatSelector selector;
     @Inject private ComponentFromContextConstructor componentFromContextConstructor;
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
     @Inject private SettingsConfig settings;
     @Inject private MessagesConfig messages;
     @Inject private MessageTransformStrategiesProcessor processor;
@@ -128,7 +128,7 @@ public final class PaperChatEventExecutor implements Listener, EventExecutor {
 
         List<Player> recipients;
         if (chat == null) {
-            audiences.player(event.getPlayer().getUniqueId())
+            audiences.player(event.getPlayer())
                     .sendMessage(messages.getChatNotFound());
             recipients = Collections.emptyList();
             event.setCancelled(true);

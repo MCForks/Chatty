@@ -1,7 +1,7 @@
 package ru.brikster.chatty.guice;
 
 import com.google.inject.Inject;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import ru.brikster.chatty.api.chat.Chat;
 import ru.brikster.chatty.api.chat.ChatStyle;
 import ru.brikster.chatty.chat.ChatImpl;
@@ -24,7 +24,7 @@ public final class ConfigsLoader {
     public void loadChannels(ChatsConfig config,
                              ChatRegistry registry,
                              ComponentStringConverter componentConverter,
-                             BukkitAudiences audiences) {
+                             AudienceProvider audiences) {
         config.getChats().forEach((chatId, chatConfig) -> {
             Chat chat = new ChatImpl(chatId,
                     chatConfig.getDisplayName(),
@@ -54,7 +54,7 @@ public final class ConfigsLoader {
     @Inject
     public void loadTitleNotifications(NotificationTicker ticker,
                                        NotificationsConfig config,
-                                       BukkitAudiences audiences,
+                                       AudienceProvider audiences,
                                        PlaceholdersComponentTransformer placeholdersComponentTransformer) {
         if (config.getTitle().isEnable()) {
             config.getTitle().getLists().forEach((channelId, channelConfig) -> {
@@ -78,7 +78,7 @@ public final class ConfigsLoader {
     @Inject
     public void loadChatNotifications(NotificationTicker ticker,
                                       NotificationsConfig config,
-                                      BukkitAudiences audiences,
+                                      AudienceProvider audiences,
                                       PlaceholdersComponentTransformer placeholdersComponentTransformer) {
         if (config.getChat().isEnable()) {
             config.getChat().getLists().forEach((channelId, channelConfig) -> {
@@ -96,7 +96,7 @@ public final class ConfigsLoader {
     @Inject
     public void loadActionbarNotifications(NotificationTicker ticker,
                                            NotificationsConfig config,
-                                           BukkitAudiences audiences,
+                                           AudienceProvider audiences,
                                            PlaceholdersComponentTransformer placeholdersComponentTransformer) {
         if (config.getActionbar().isEnable()) {
             config.getActionbar()

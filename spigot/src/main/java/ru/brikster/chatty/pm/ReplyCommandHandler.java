@@ -2,7 +2,7 @@ package ru.brikster.chatty.pm;
 
 import cloud.commandframework.context.CommandContext;
 import cloud.commandframework.execution.CommandExecutionHandler;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import ru.brikster.chatty.config.file.MessagesConfig;
@@ -14,7 +14,7 @@ import javax.inject.Singleton;
 @Singleton
 public final class ReplyCommandHandler implements CommandExecutionHandler<CommandSender> {
 
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
     @Inject private PmMessageService pmMessageService;
     @Inject private MessagesConfig messagesConfig;
     @Inject private PrivateMessageCommandHandler privateMessageCommandHandler;

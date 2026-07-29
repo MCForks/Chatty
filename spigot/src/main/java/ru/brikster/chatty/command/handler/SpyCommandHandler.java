@@ -3,7 +3,7 @@ package ru.brikster.chatty.command.handler;
 import cloud.commandframework.context.CommandContext;
 import cloud.commandframework.execution.CommandExecutionHandler;
 import lombok.RequiredArgsConstructor;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -19,7 +19,7 @@ public final class SpyCommandHandler implements CommandExecutionHandler<CommandS
 
     private final PlayerDataRepository playerDataRepository;
     private final MessagesConfig messagesConfig;
-    private final BukkitAudiences audiences;
+    private final AudienceProvider audiences;
 
     @Override
     public void execute(@NonNull CommandContext<CommandSender> commandContext) {

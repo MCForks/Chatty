@@ -2,7 +2,7 @@ package ru.brikster.chatty.chat.message.transform.stage.post;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -38,7 +38,7 @@ public class MentionsTransformStrategy implements MessageTransformStrategy<Compo
     @Inject private ComponentStringConverter componentStringConverter;
     @Inject private RelationalPlaceholdersComponentTransformer relationalPlaceholdersComponentTransformer;
     @Inject private PlaceholdersComponentTransformer placeholdersComponentTransformer;
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
 
     private final Cache<Player, Pattern> playerPatternCache = CacheBuilder.newBuilder()
             .weakKeys()

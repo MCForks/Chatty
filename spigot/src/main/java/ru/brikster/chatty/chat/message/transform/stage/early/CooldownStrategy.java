@@ -3,7 +3,7 @@ package ru.brikster.chatty.chat.message.transform.stage.early;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import lombok.SneakyThrows;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import ru.brikster.chatty.api.chat.message.context.MessageContext;
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class CooldownStrategy implements MessageTransformStrategy<String> {
 
     @Inject private MessagesConfig messagesConfig;
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
 
     private final ConcurrentHashMap<String, Cache<CommandSender, Long>> cooldownCachesMap = new ConcurrentHashMap<>();
 

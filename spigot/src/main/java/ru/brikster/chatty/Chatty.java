@@ -20,7 +20,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import lombok.SneakyThrows;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -61,7 +61,6 @@ import ru.brikster.chatty.proxy.ProxyService;
 import ru.brikster.chatty.repository.player.PlayerDataRepository;
 import ru.brikster.chatty.util.AdventureUtil;
 import ru.brikster.chatty.util.EventUtil;
-import ru.brikster.chatty.util.PaperUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -132,7 +131,7 @@ public final class Chatty extends JavaPlugin {
                             "Links: <click:open_url:'https://github.com/Brikster/Chatty'><aqua>GitHub</aqua></click><newline>" +
                             "Use <yellow>/chatty reload</yellow> to reload configuration.");
 
-                    injector.getInstance(BukkitAudiences.class)
+                    injector.getInstance(AudienceProvider.class)
                             .sender(handler.getSender())
                             .sendMessage(component);
                 }).build();
@@ -144,7 +143,7 @@ public final class Chatty extends JavaPlugin {
                     try {
                         closeResources();
                         initialize();
-                        injector.getInstance(BukkitAudiences.class)
+                        injector.getInstance(AudienceProvider.class)
                                 .sender(handler.getSender())
                                 .sendMessage(injector.getInstance(MessagesConfig.class).getReloadCommandSuccess());
                     } catch (Throwable t) {
@@ -160,14 +159,7 @@ public final class Chatty extends JavaPlugin {
     }
 
     private void initialize() throws Exception {
-        BukkitAudiences audiences;
-        if (isUseNativeAdventurePlatform()) {
-            getLogger().log(Level.INFO, "Using native Adventure audience provider");
-            audiences = new NativeBukkitAudienceProvider();
-        } else {
-            getLogger().log(Level.INFO, "Using bundled Adventure audience provider");
-            audiences = BukkitAudiences.create(this);
-        }
+        AudienceProvider audiences = new NativeBukkitAudienceProvider();
 
         ChattyInitEvent initEvent = new ChattyInitEvent(audiences);
         getServer().getPluginManager().callEvent(initEvent);
@@ -246,9 +238,6 @@ public final class Chatty extends JavaPlugin {
     }
 
     private void closeResources() throws IOException {
-        if (!isUseNativeAdventurePlatform()) {
-            BukkitAudiences.create(this).close();
-        }
         injector.getInstance(PlayerDataRepository.class).close();
         injector.getInstance(ProxyService.class).close();
         EventUtil.unregisterListeners(PlayerJoinEvent.class, this);
@@ -286,7 +275,7 @@ public final class Chatty extends JavaPlugin {
                     e.printStackTrace();
                     return messagesConfig.getCmdExecutionError();
                 })
-                .apply(asyncCommandManager, injector.getInstance(BukkitAudiences.class)::sender);
+                .apply(asyncCommandManager, injector.getInstance(AudienceProvider.class)::sender);
 
         asyncCommandManager.setSetting(ManagerSettings.ALLOW_UNSAFE_REGISTRATION, true);
     }
@@ -396,10 +385,6 @@ public final class Chatty extends JavaPlugin {
             //noinspection DataFlowIssue
             commandManager.deleteRootCommand(node.getValue().getName());
         }
-    }
-
-    private static boolean isUseNativeAdventurePlatform() {
-        return PaperUtil.isSupportAdventure();
     }
 
 }

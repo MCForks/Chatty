@@ -1,7 +1,7 @@
 package ru.brikster.chatty.chat.message.transform.stage.early.moderation;
 
 import com.google.inject.Singleton;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.brikster.chatty.api.chat.message.context.MessageContext;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Singleton
 public final class SwearModerationStrategyModeration implements ModerationMatcherStrategy {
 
-    private final BukkitAudiences audiences;
+    private final AudienceProvider audiences;
     private final MessagesConfig messages;
     private final SwearRepository swearRepository;
 
@@ -30,7 +30,7 @@ public final class SwearModerationStrategyModeration implements ModerationMatche
     private final Pattern swearPattern;
 
     @Inject
-    public SwearModerationStrategyModeration(BukkitAudiences audiences, MessagesConfig messages, ModerationConfig moderationConfig, SwearRepository swearRepository) {
+    public SwearModerationStrategyModeration(AudienceProvider audiences, MessagesConfig messages, ModerationConfig moderationConfig, SwearRepository swearRepository) {
         this.audiences = audiences;
         this.messages = messages;
         this.swearRepository = swearRepository;

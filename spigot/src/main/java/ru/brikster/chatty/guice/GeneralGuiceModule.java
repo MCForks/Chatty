@@ -10,7 +10,7 @@ import eu.okaeri.configs.serdes.commons.SerdesCommons;
 import eu.okaeri.configs.validator.okaeri.OkaeriValidator;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import eu.okaeri.configs.yaml.snakeyaml.YamlSnakeYamlConfigurer;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.redisson.config.Config;
@@ -104,7 +104,7 @@ public final class GeneralGuiceModule extends AbstractModule {
     private static final Set<String> ALLOWED_LANGUAGES = Set.of("en-US", "ru-RU", "de-DE", "es-ES", "zh-CN");
 
     private final Plugin plugin;
-    private final BukkitAudiences audienceProvider;
+    private final AudienceProvider audienceProvider;
 
     private final Path dataFolderPath;
 
@@ -114,7 +114,7 @@ public final class GeneralGuiceModule extends AbstractModule {
     private final SerdesChatty serdesChatty;
 
     public GeneralGuiceModule(final Plugin plugin,
-                              final BukkitAudiences audienceProvider,
+                              final AudienceProvider audienceProvider,
                               final Path dataFolderPath) {
         this.plugin = plugin;
         this.audienceProvider = audienceProvider;
@@ -138,7 +138,7 @@ public final class GeneralGuiceModule extends AbstractModule {
         bind(ChatSelector.class).to(ChatSelectorImpl.class);
         bind(NotificationTicker.class).to(ScheduledExecutorNotificationTicker.class);
 
-        bind(BukkitAudiences.class).toInstance(audienceProvider);
+        bind(AudienceProvider.class).toInstance(audienceProvider);
 
         SettingsConfig settingsConfig = createConfig(SettingsConfig.class, "settings.yml");
 

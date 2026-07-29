@@ -1,6 +1,6 @@
 package ru.brikster.chatty.misc;
 
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
+import ru.brikster.chatty.api.adventure.AudienceProvider;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
 import org.bukkit.entity.Player;
@@ -27,7 +27,7 @@ public final class VanillaListener implements Listener {
     @Inject private PlaceholdersComponentTransformer placeholdersComponentTransformer;
     @Inject private PrefixComponentTransformer prefixComponentTransformer;
     @Inject private VanillaConfig vanillaConfig;
-    @Inject private BukkitAudiences audiences;
+    @Inject private AudienceProvider audiences;
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onJoin(PlayerJoinEvent event) {
