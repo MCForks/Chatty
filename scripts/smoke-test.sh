@@ -71,7 +71,7 @@ builds = json.load(sys.stdin)
 build = next((item for item in builds if item["channel"] == "STABLE"), builds[0])
 print(build["id"])
 print(build["downloads"]["server:default"]["url"])
-')
+' | tr -d '\r')
     build="${paper_build[0]}"
     url="${paper_build[1]}"
     curl -fsSL \
@@ -85,7 +85,8 @@ print(build["downloads"]["server:default"]["url"])
 download_discordsrv() {
     local out="$1" url
     url="$(curl -fsSL "https://api.github.com/repos/DiscordSRV/DiscordSRV/releases/latest" \
-        | python3 -c 'import sys, json; print(next(a["browser_download_url"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".jar")))')" || return 1
+        | python3 -c 'import sys, json; print(next(a["browser_download_url"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".jar")))' \
+        | tr -d '\r')" || return 1
     [ -n "$url" ] || return 1
     curl -fsSL -o "$out" "$url" || return 1
     echo "DiscordSRV: ${url##*/}"
