@@ -25,6 +25,13 @@ public final class MessageTransformStrategiesProcessorImpl implements MessageTra
 
     @Override
     public <MessageT> @NotNull MessageTransformResult<MessageT> handle(MessageContext<MessageT> context, Stage stage) {
+        if (context.getChat() == null) {
+            return new MessageTransformResultImpl<>(context,
+                    new ArrayList<>(),
+                    new ArrayList<>(),
+                    false, false, false);
+        }
+
         MessageContext<?> newContext = context;
 
         List<Player> removedRecipients = new ArrayList<>();

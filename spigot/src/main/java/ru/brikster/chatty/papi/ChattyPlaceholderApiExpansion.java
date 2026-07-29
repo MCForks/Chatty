@@ -27,7 +27,7 @@ public class ChattyPlaceholderApiExpansion extends PlaceholderExpansion implemen
 
     @Override
     public String getVersion() {
-        return plugin.getDescription().getVersion();
+        return plugin.getPluginMeta().getVersion();
     }
 
     @Override

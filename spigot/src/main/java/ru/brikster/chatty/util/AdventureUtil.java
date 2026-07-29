@@ -283,10 +283,11 @@ public class AdventureUtil {
                 part = part.hoverEvent(hoverEvent);
             }
 
-            if (part.clickEvent != null) {
+            if (part.clickEvent != null
+                    && part.clickEvent.payload() instanceof ClickEvent.Payload.Text textPayload) {
                 StringBuilder builder = new StringBuilder();
 
-                String clickEventValue = part.clickEvent.value();
+                String clickEventValue = textPayload.value();
 
                 int beginIndex = 0;
                 Matcher matcher = pattern.matcher(clickEventValue);
@@ -303,7 +304,7 @@ public class AdventureUtil {
                 }
 
                 part = part.clickEvent(ClickEvent
-                        .clickEvent(part.clickEvent.action(), builder.toString()));
+                        .clickEvent(part.clickEvent.action(), ClickEvent.Payload.string(builder.toString())));
             }
 
             state.apply(part);

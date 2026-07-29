@@ -41,7 +41,7 @@ public final class ComponentFromContextConstructorImpl implements ComponentFromC
                 PLAYER_OR_MESSAGE_PLACEHOLDER,
                 matchedString -> {
                     if (matchedString.equals(PLAYER_FORMAT_PLACEHOLDER)) {
-                        return Component.text(context.getSender().getDisplayName() + " ");
+                        return context.getSender().displayName().append(Component.space());
                     } else if (matchedString.equals(MESSAGE_FORMAT_PLACEHOLDER)) {
                         return formattedMessageComponent.append(Component.text(" "));
                     }
@@ -49,7 +49,8 @@ public final class ComponentFromContextConstructorImpl implements ComponentFromC
                 },
                 matchedString -> {
                     if (matchedString.equals(PLAYER_FORMAT_PLACEHOLDER)) {
-                        return context.getSender().getDisplayName() + " ";
+                        return PlainTextComponentSerializer.plainText()
+                                .serialize(context.getSender().displayName()) + " ";
                     } else if (matchedString.equals(MESSAGE_FORMAT_PLACEHOLDER)) {
                         return PlainTextComponentSerializer.plainText().serialize(formattedMessageComponent) + " ";
                     }

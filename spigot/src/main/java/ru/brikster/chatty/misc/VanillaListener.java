@@ -59,10 +59,10 @@ public final class VanillaListener implements Listener {
 
         if (joinMessage != null) {
             if (joinMessage.equals(Component.empty()) || !hasPermission) {
-                event.setJoinMessage(null);
+                event.joinMessage(null);
                 return;
             } else {
-                event.setJoinMessage(null);
+                event.joinMessage(null);
                 Component formatted = formatWithPlaceholders(joinMessage, event.getPlayer());
                 audiences.all().sendMessage(formatted);
             }
@@ -93,10 +93,10 @@ public final class VanillaListener implements Listener {
 
         if (quitMessage != null) {
             if (quitMessage.equals(Component.empty()) || !hasPermission) {
-                event.setQuitMessage(null);
+                event.quitMessage(null);
                 return;
             } else {
-                event.setQuitMessage(null);
+                event.quitMessage(null);
                 Component formatted = formatWithPlaceholders(quitMessage, event.getPlayer());
                 audiences.all().sendMessage(formatted);
             }
@@ -127,10 +127,10 @@ public final class VanillaListener implements Listener {
 
         if (deathMessage != null) {
             if (deathMessage.equals(Component.empty()) || !hasPermission) {
-                event.setDeathMessage(null);
+                event.deathMessage(null);
                 return;
             } else {
-                event.setDeathMessage(null);
+                event.deathMessage(null);
 
                 String deathCause;
                 var damageEvent = event.getEntity().getLastDamageCause();
@@ -161,7 +161,7 @@ public final class VanillaListener implements Listener {
         formatted = formatted.replaceText(
                 TextReplacementConfig.builder()
                         .matchLiteral("{player}")
-                        .replacement(player.getDisplayName())
+                        .replacement(player.displayName())
                         .build());
         return formatted;
     }

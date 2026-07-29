@@ -210,24 +210,36 @@ public final class GeneralGuiceModule extends AbstractModule {
     private void setupRedis(ProxyConfig proxyConfig) {
         Config redisConfig;
         if (proxyConfig.isUseExternalRedisConfig()) {
-            Path redisConfigPath = dataFolderPath.resolve("redis_config.json");
-            if (Files.exists(redisConfigPath)) {
+            Path redisConfigPath = dataFolderPath.resolve("redis_config.yml");
+            Path legacyRedisConfigPath = dataFolderPath.resolve("redis_config.json");
+            Path sourcePath = Files.exists(redisConfigPath)
+                    ? redisConfigPath
+                    : legacyRedisConfigPath;
+            if (Files.exists(sourcePath)) {
                 try {
-                    //noinspection deprecation
-                    redisConfig = Config.fromJSON(Files.newBufferedReader(redisConfigPath));
+                    // JSON is a valid YAML subset, so the supported YAML parser
+                    // can migrate an existing Redisson JSON configuration.
+                    try (var reader = Files.newBufferedReader(sourcePath, StandardCharsets.UTF_8)) {
+                        redisConfig = Config.fromYAML(reader);
+                    }
+                    if (sourcePath.equals(legacyRedisConfigPath)) {
+                        Files.writeString(redisConfigPath, redisConfig.toYAML(), StandardCharsets.UTF_8,
+                                StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW);
+                        plugin.getLogger().warning(
+                                "Migrated legacy redis_config.json to redis_config.yml; the old file was kept as a backup.");
+                    }
                 } catch (IOException e) {
-                    throw new IllegalStateException("Cannot read redis_config.json", e);
+                    throw new IllegalStateException("Cannot read or migrate external Redis configuration", e);
                 }
             } else {
                 redisConfig = new Config();
                 redisConfig.useSingleServer()
                         .setAddress("redis://localhost:6379");
                 try {
-                    //noinspection deprecation
-                    Files.writeString(redisConfigPath, redisConfig.toJSON(), StandardCharsets.UTF_8,
+                    Files.writeString(redisConfigPath, redisConfig.toYAML(), StandardCharsets.UTF_8,
                             StandardOpenOption.WRITE, StandardOpenOption.CREATE);
                 } catch (IOException e) {
-                    throw new IllegalStateException("Cannot write redis_config.json", e);
+                    throw new IllegalStateException("Cannot write redis_config.yml", e);
                 }
             }
         } else {
@@ -379,8 +391,8 @@ public final class GeneralGuiceModule extends AbstractModule {
 
         return ConfigManager.create(configClass, config -> {
             config.withConfigurer(new OkaeriValidator(new YamlSnakeYamlConfigurer(new Yaml(
-                    new Constructor(),
-                    new Representer() {
+                    new Constructor(new LoaderOptions()),
+                    new Representer(new DumperOptions()) {
                         {
                             setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
                             this.representers.put(String.class, new RepresentString() {

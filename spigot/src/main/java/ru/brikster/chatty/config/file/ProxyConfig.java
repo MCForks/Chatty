@@ -32,7 +32,7 @@ public class ProxyConfig extends OkaeriConfig {
     private RedisConfig redisConfig = new RedisConfig();
 
     @Comment({"", "Enable external Redis configuration for advanced setup."})
-    @Comment("File with name \"redis_config.json\" will be created.")
+    @Comment("File with name \"redis_config.yml\" will be created.")
     @Comment("See \"Redisson\" library documentation for details")
     private boolean useExternalRedisConfig = false;
 

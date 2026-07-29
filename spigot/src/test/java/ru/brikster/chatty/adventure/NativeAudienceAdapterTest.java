@@ -23,7 +23,7 @@ class NativeAudienceAdapterTest {
         String json = NativeAudienceAdapter.serializeForNative(component);
 
         // The compatibility schema must still carry the camelCase form an older
-        // native Adventure (e.g. the one bundled with Paper 1.21.4) reads.
+        // native Adventure (e.g. the one bundled with Paper 26.2) reads.
         assertTrue(json.contains("\"clickEvent\""),
                 "legacy camelCase clickEvent missing from bridge JSON: " + json);
         assertTrue(json.contains("\"hoverEvent\""),

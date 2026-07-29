@@ -92,11 +92,6 @@ public class SettingsConfig extends OkaeriConfig {
     @Comment({"", "Settings for parsing links from player messages.", "See chats.yml for per-chat enabling"})
     private LinksParsingConfig linksParsing = new LinksParsingConfig();
 
-    @Comment({"",
-            "Send unsigned chat messages with sender's UUID.",
-            "Helpful for enabling in-game ignore feature, but may cause newer client CRASHES"})
-    private boolean sendIdentifiedMessages = false;
-
     @Comment({"", "Enable debug messages"})
     private boolean debug = false;
 

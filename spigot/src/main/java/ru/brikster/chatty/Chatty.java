@@ -18,6 +18,7 @@ import cloud.commandframework.minecraft.extras.MinecraftExceptionHandler;
 import cloud.commandframework.minecraft.extras.MinecraftExceptionHandler.ExceptionType;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import lombok.SneakyThrows;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
@@ -27,14 +28,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.brikster.chatty.adventure.NativeBukkitAudienceProvider;
 import ru.brikster.chatty.api.ChattyApiImpl;
 import ru.brikster.chatty.api.event.ChattyInitEvent;
-import ru.brikster.chatty.chat.executor.LegacyEventExecutor;
+import ru.brikster.chatty.chat.executor.PaperChatEventExecutor;
 import ru.brikster.chatty.chat.registry.ChatRegistry;
 import ru.brikster.chatty.command.CommandSuggestionsProvider;
 import ru.brikster.chatty.command.ProxyingCommandHandler;
@@ -128,7 +128,7 @@ public final class Chatty extends JavaPlugin {
                 .<CommandSender>newBuilder("chatty", CommandMeta.simple().build())
                 .handler(handler -> {
                     Component component = MiniMessage.miniMessage().deserialize(
-                            "<gold><bold>Chatty</bold></gold> <gray>(v" + getDescription().getVersion() + ")</gray> - chat management system by <green>@Brikster</green>.<newline>" +
+                            "<gold><bold>Chatty</bold></gold> <gray>(v" + getPluginMeta().getVersion() + ")</gray> - chat management system by <green>@Brikster</green>.<newline>" +
                             "Links: <click:open_url:'https://github.com/Brikster/Chatty'><aqua>GitHub</aqua></click><newline>" +
                             "Use <yellow>/chatty reload</yellow> to reload configuration.");
 
@@ -185,10 +185,10 @@ public final class Chatty extends JavaPlugin {
             getLogger().log(Level.WARNING, "Cannot use monitor priority for listener. HIGHEST priority usage will be forced");
         }
 
-        LegacyEventExecutor chatListener = injector.getInstance(LegacyEventExecutor.class);
+        PaperChatEventExecutor chatListener = injector.getInstance(PaperChatEventExecutor.class);
 
         this.getServer().getPluginManager().registerEvents(chatListener, this);
-        this.getServer().getPluginManager().registerEvent(AsyncPlayerChatEvent.class, chatListener, priority, chatListener, this, true);
+        this.getServer().getPluginManager().registerEvent(AsyncChatEvent.class, chatListener, priority, chatListener, this, true);
 
         VanillaListener miscListener = injector.getInstance(VanillaListener.class);
         this.getServer().getPluginManager().registerEvents(miscListener, this);
@@ -254,7 +254,7 @@ public final class Chatty extends JavaPlugin {
         EventUtil.unregisterListeners(PlayerJoinEvent.class, this);
         EventUtil.unregisterListeners(PlayerQuitEvent.class, this);
         EventUtil.unregisterListeners(PlayerDeathEvent.class, this);
-        EventUtil.unregisterListeners(AsyncPlayerChatEvent.class, this);
+        EventUtil.unregisterListeners(AsyncChatEvent.class, this);
         notificationTicker.cancelTicking();
     }
 
@@ -389,6 +389,9 @@ public final class Chatty extends JavaPlugin {
     }
 
     private static void unregisterAllCommands(BukkitCommandManager<CommandSender> commandManager) {
+        if (commandManager == null) {
+            return;
+        }
         for (Node<CommandArgument<CommandSender, ?>> node : commandManager.commandTree().getRootNodes()) {
             //noinspection DataFlowIssue
             commandManager.deleteRootCommand(node.getValue().getName());
@@ -396,7 +399,7 @@ public final class Chatty extends JavaPlugin {
     }
 
     private static boolean isUseNativeAdventurePlatform() {
-        return PaperUtil.isPaper() && PaperUtil.isSupportAdventure();
+        return PaperUtil.isSupportAdventure();
     }
 
 }
