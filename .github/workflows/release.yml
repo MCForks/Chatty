@@ -8,87 +8,84 @@ on:
 
 permissions:
   contents: write
-  issues: write
-  pull-requests: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
-  release_please:
-    name: Prepare release
-    runs-on: ubuntu-latest
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
-      version: ${{ steps.release.outputs.version }}
-      sha: ${{ steps.release.outputs.sha }}
-
-    steps:
-      - name: Build changelog and release
-        id: release
-        uses: googleapis/release-please-action@v4
-        with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-
-  publish:
-    name: Build and publish artifacts
-    needs: release_please
-    if: ${{ needs.release_please.outputs.release_created == 'true' }}
+  release:
+    name: Build and publish release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out release commit
+      - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ needs.release_please.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Resolve release metadata
+        id: release
+        env:
+          BOOTSTRAP_SHA: 4c24014631d371a6845bddb979fb7cddbf5fe183
+          INITIAL_TAG: v2.19.14
+        run: bash .github/scripts/prepare-release.sh
 
       - name: Set up Java 25
+        if: ${{ steps.release.outputs.publish == 'true' }}
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Set up Gradle
+        if: ${{ steps.release.outputs.publish == 'true' }}
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build release
+        if: ${{ steps.release.outputs.publish == 'true' }}
         run: >-
           ./gradlew clean build --no-daemon
-          -PchattyVersion=${{ needs.release_please.outputs.version }}
+          -PchattyVersion=${{ steps.release.outputs.version }}
 
       - name: Verify release artifact
+        if: ${{ steps.release.outputs.publish == 'true' }}
         env:
-          VERSION: ${{ needs.release_please.outputs.version }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
           artifact="build/libs/Chatty-${VERSION}.jar"
           test -f "$artifact"
           sha256sum "$artifact" > "${artifact}.sha256"
 
       - name: Save workflow artifact
+        if: ${{ steps.release.outputs.publish == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: Chatty-${{ needs.release_please.outputs.version }}
+          name: Chatty-${{ steps.release.outputs.version }}
           path: |
-            build/libs/Chatty-${{ needs.release_please.outputs.version }}.jar
-            build/libs/Chatty-${{ needs.release_please.outputs.version }}.jar.sha256
+            build/libs/Chatty-${{ steps.release.outputs.version }}.jar
+            build/libs/Chatty-${{ steps.release.outputs.version }}.jar.sha256
           if-no-files-found: error
 
-      - name: Attach files to GitHub Release
+      - name: Publish GitHub Release
+        if: ${{ steps.release.outputs.publish == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release_please.outputs.tag_name }}
-          VERSION: ${{ needs.release_please.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
           artifact="build/libs/Chatty-${VERSION}.jar"
-          gh release upload "$TAG" "$artifact" "${artifact}.sha256" --clobber
-
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release_please.outputs.tag_name }}
-          VERSION: ${{ needs.release_please.outputs.version }}
-        run: gh release edit "$TAG" --draft=false --title "Chatty $VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$artifact" "${artifact}.sha256" --clobber
+            gh release edit "$TAG" \
+              --title "Chatty $VERSION" \
+              --notes-file release-notes.md \
+              --draft=false
+          else
+            gh release create "$TAG" \
+              "$artifact" \
+              "${artifact}.sha256" \
+              --target "$GITHUB_SHA" \
+              --title "Chatty $VERSION" \
+              --notes-file release-notes.md
+          fi
